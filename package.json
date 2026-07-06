@@ -1,0 +1,33 @@
+{
+  "name": "verna",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p backend/tsconfig.json",
+    "start": "node backend/dist/server.js",
+    "dev": "ts-node backend/src/server.ts",
+    "web:dev": "vite frontend",
+    "web:build": "vite build frontend",
+    "web:preview": "vite preview frontend",
+    "watch": "tsc -w -p backend/tsconfig.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^25.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
+    "dotenv": "^17.3.1",
+    "framer-motion": "^12.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

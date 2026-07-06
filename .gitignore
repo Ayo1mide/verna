@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment variables (NEVER commit secrets!)
+.env.local
+.env*.local
+.env
+
+# TypeScript
+dist/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase
+.supabase/
+supabase/.env.local
+backend/supabase/.env.local
+backend/supabase/.temp/
+
+# Build artifacts
+*.js.map
