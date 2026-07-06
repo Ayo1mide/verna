@@ -1,7 +1,7 @@
 {
   "name": "verna",
   "version": "1.0.0",
-  "description": "",
+  "description": "Anonymous poem-sharing platform with AI-assisted publishing, Verna identities, and Supabase backend APIs.",
   "main": "index.js",
   "scripts": {
     "build": "tsc -p backend/tsconfig.json",
@@ -10,6 +10,7 @@
     "web:dev": "vite frontend",
     "web:build": "vite build frontend",
     "web:preview": "vite preview frontend",
+    "vercel-build": "npm --prefix frontend run build",
     "watch": "tsc -w -p backend/tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

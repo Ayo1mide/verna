@@ -6,10 +6,11 @@ ask AI to help transform or edit a poem before publishing, reply to poems with
 poems, save work they care about, repost poems, and follow anonymous poetic
 identities such as `verna1`, `verna2`, or `verna100`.
 
-The project is still in active product/UI development, but the repository shows
-the core system design: identity, auth, content creation, AI-assisted editing,
-public feeds, moderation, reactions, saves, reposts, follows, and monetization
-hooks.
+The Vercel frontend runs as a complete browser demo even before the backend is
+deployed. Reviewers can try the product loop end to end: read poems, post, reply,
+save, repost, follow profiles, and use the AI-style editor. The Supabase backend
+in this repository is the production path for real auth, real AI, persistence,
+moderation, and payments.
 
 ## Why This Project Exists
 
@@ -45,6 +46,13 @@ Users can publish as either:
 - `anonymous`: visible in the feed without a public handle.
 
 ## Current App Flow
+
+### Portfolio Demo Mode
+
+- Works on Vercel without deploying Supabase first.
+- Stores demo posts, saves, follows, replies, and reposts in browser storage.
+- Uses a deterministic AI-style editor so reviewers can try the creation flow.
+- Keeps the backend architecture visible in the repo for technical review.
 
 ### Feed
 
@@ -290,6 +298,33 @@ npm run build        # backend build
 npm run web:dev      # frontend dev server
 npm run web:build    # frontend production build
 ```
+
+## Deploying the Web App
+
+The public web app is configured for Vercel through `vercel.json`.
+
+Vercel should use:
+
+```txt
+Install Command: npm install
+Build Command: npm --prefix frontend run build
+Output Directory: frontend/dist
+```
+
+The current frontend works as a browser demo without any Vercel environment
+variables. For future production wiring, reserve:
+
+```txt
+VITE_VERNA_DEMO_MODE=true
+VITE_VERNA_FUNCTIONS_BASE=https://your-project.supabase.co/functions/v1
+```
+
+For a portfolio review deployment, you can deploy the frontend first and it will
+still be a working site. The backend only needs to be deployed when you want real
+user data, Google OAuth, Claude AI, database persistence, and production
+moderation.
+
+More detail is in `docs/VERCEL_DEPLOYMENT.md`.
 
 ## Environment Variables
 
