@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { z } from "https://esm.sh/zod@3.22.2"
-import { assertPost, handleError, json, requireUser } from "../_shared/auth.ts"
+import { assertPost, handleError, HttpError, json, rateLimit, requireUser, serviceClient } from "../_shared/auth.ts"
+import { fetchWithTimeout } from "../_shared/http.ts"
 
 const bodySchema = z.object({
   user_id: z.string().uuid().optional(),
@@ -12,6 +13,21 @@ const bodySchema = z.object({
 })
 
 const FLW_BASE_URL = "https://api.flutterwave.com/v3"
+
+function assertAllowedReturnUrl(value: string) {
+  const parsed = new URL(value)
+  const configured = [
+    Deno.env.get("VERNA_FRONTEND_URL"),
+    ...(Deno.env.get("VERNA_ALLOWED_REDIRECT_ORIGINS") ?? "").split(","),
+  ]
+    .map((item) => item?.trim())
+    .filter(Boolean)
+    .map((item) => new URL(item!).origin)
+
+  if (configured.length > 0 && !configured.includes(parsed.origin)) {
+    throw new HttpError(400, "Checkout return URL is not allowed")
+  }
+}
 
 function getHeaders() {
   const secret = Deno.env.get("FLUTTERWAVE_SECRET_KEY")
@@ -30,7 +46,7 @@ async function findOrCreateMonthlyPlan() {
   const currency = Deno.env.get("FLW_PREMIUM_CURRENCY") ?? "USD"
   const name = Deno.env.get("FLW_PREMIUM_PLAN_NAME") ?? "VERNA Premium Monthly"
 
-  const listRes = await fetch(`${FLW_BASE_URL}/payment-plans`, { headers: getHeaders() })
+  const listRes = await fetchWithTimeout(`${FLW_BASE_URL}/payment-plans`, { headers: getHeaders(), timeoutMs: 12000 })
   const listJson = await listRes.json()
   if (listRes.ok && Array.isArray(listJson?.data)) {
     const existing = listJson.data.find((p: any) =>
@@ -42,7 +58,7 @@ async function findOrCreateMonthlyPlan() {
     if (existing?.id) return Number(existing.id)
   }
 
-  const createRes = await fetch(`${FLW_BASE_URL}/payment-plans`, {
+  const createRes = await fetchWithTimeout(`${FLW_BASE_URL}/payment-plans`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -51,6 +67,7 @@ async function findOrCreateMonthlyPlan() {
       interval: "monthly",
       currency,
     }),
+    timeoutMs: 12000,
   })
   const createJson = await createRes.json()
   if (!createRes.ok || !createJson?.data?.id) {
@@ -76,11 +93,16 @@ serve(async (req) => {
     const { email, name, phone_number, success_url, cancel_url } = parsed.data
     const user_id = authUser.id
     if (parsed.data.user_id && parsed.data.user_id !== user_id) return json({ error: true, message: "Token does not match requested user" }, 403)
+    assertAllowedReturnUrl(success_url)
+    assertAllowedReturnUrl(cancel_url)
+
+    const supabase = serviceClient()
+    await rateLimit(supabase, `billing:flutterwave:${user_id}`, 10, 3600)
 
     const planId = await findOrCreateMonthlyPlan()
     const txRef = `verna_premium_${user_id}_${Date.now()}`
 
-    const paymentRes = await fetch(`${FLW_BASE_URL}/payments`, {
+    const paymentRes = await fetchWithTimeout(`${FLW_BASE_URL}/payments`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({
@@ -105,6 +127,7 @@ serve(async (req) => {
           provider: "flutterwave",
         },
       }),
+      timeoutMs: 12000,
     })
     const paymentJson = await paymentRes.json()
     if (!paymentRes.ok || !paymentJson?.data?.link) {

@@ -1,6 +1,7 @@
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { buildRefreshToken, hashToken, signVernaJwt } from "./app-jwt.ts"
 import { HttpError } from "./auth.ts"
+import { fetchWithTimeout } from "./http.ts"
 
 type SupabaseClient = ReturnType<typeof createClient>
 
@@ -93,18 +94,20 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleUserInfo> 
     grant_type: "authorization_code",
   })
 
-  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+  const tokenRes = await fetchWithTimeout("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
+    timeoutMs: 10000,
   })
   const tokenJson = await tokenRes.json().catch(() => ({}))
   if (!tokenRes.ok || !tokenJson.access_token) {
     throw new HttpError(401, tokenJson.error_description || tokenJson.error || "Google token exchange failed")
   }
 
-  const userRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+  const userRes = await fetchWithTimeout("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { Authorization: `Bearer ${tokenJson.access_token}` },
+    timeoutMs: 10000,
   })
   const userInfo = await userRes.json().catch(() => ({}))
   if (!userRes.ok || !userInfo.sub || !userInfo.email || userInfo.email_verified === false) {

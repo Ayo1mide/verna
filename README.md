@@ -96,6 +96,7 @@ verna/
 |   |   |   |-- google-oauth-url/
 |   |   |   |-- google-oauth-callback/
 |   |   |   |-- google-oauth-exchange/
+|   |   |   |-- complete-onboarding/
 |   |   |   |-- ai-edit-poem/
 |   |   |   |-- publish-poem/
 |   |   |   |-- list-public-poems/
@@ -160,6 +161,7 @@ Authorization: Bearer <verna_access_token>
 | `google-oauth-exchange` | No | Exchange one-time code for Verna tokens |
 | `refresh-session` | Refresh token | Rotate refresh token and issue access token |
 | `get-me` | Yes | Load current Verna profile |
+| `complete-onboarding` | Yes | Save onboarding goal and preferred reading moods |
 | `ai-edit-poem` | Yes | Generate or edit poem inline before posting |
 | `publish-poem` | Yes | Publish poem or poem reply |
 | `list-public-poems` | No | Load public For You feed |
@@ -179,11 +181,101 @@ Authorization: Bearer <verna_access_token>
 | `create-flutterwave-payment-link` | Yes | Flutterwave premium checkout |
 | `flutterwave-webhook` | Flutterwave signature | Sync Flutterwave payment state |
 
+## Backend Product Flow
+
+This is the intended launch flow the frontend should follow. The product should
+feel like an invitation to write, not a wall before the feed.
+
+```txt
+OAuth
+  -> google-oauth-url
+  -> google-oauth-callback
+  -> google-oauth-exchange
+  -> get-me
+
+First session
+  -> complete-onboarding
+     Saves why the user came and which moods they want to read.
+
+Optional first expression
+  -> create-poem-draft { action: "save_draft" }
+     Saves rough writing without calling AI.
+  -> create-poem-draft { action: "polish" }
+     Queues an AI job and returns 202 while process-ai-jobs does the work.
+
+Publish
+  -> publish-poem
+     Publishes from a ready AI draft, a saved draft, or direct poem content.
+     Supports author_mode: "verna_id" or "anonymous".
+     Runs moderation before public visibility.
+
+Discover/read
+  -> list-public-poems
+     Supports latest/top sorting plus mood and tag filters for Discover tabs.
+  -> list-following-feed
+  -> get-public-profile
+
+Signature interaction
+  -> publish-poem { parent_post_id }
+     Replies are poems, not comments.
+  -> list-poem-thread
+     Returns the original poem plus poem replies.
+
+Retention actions
+  -> react-to-poem
+  -> save-poem
+  -> repost-poem
+  -> follow-profile
+  -> report-poem
+```
+
+The backend flow is covered by Deno mock API tests in
+`backend/supabase/functions/verna-flow.test.ts`. The test simulates an
+authenticated user completing onboarding, saving a rough draft, publishing under
+a Verna handle, loading the public feed, replying anonymously with a poem, and
+loading the poem thread. It also verifies unsafe content is rejected and excluded
+from the public feed.
+
+For the exact mock request/response payloads and stored data after each step,
+see `docs/API_FLOW_MOCK_DATA.md`.
+
+## Production Readiness Rating
+
+Senior-engineer assessment: **7/10 for an MVP backend, 5.5/10 for high-scale
+production**.
+
+Strong:
+
+- Clear poem-first domain model: drafts, posts, replies, saves, reposts,
+  follows, reports, moderation, and public-safe views.
+- Custom OAuth/JWT flow keeps real identity private while exposing stable Verna
+  handles.
+- AI generation can run asynchronously through `ai_jobs`.
+- Rate limiting exists on high-risk routes.
+- Public publishing is moderation-gated.
+- Billing webhooks have signature verification and idempotency tracking.
+- Deno handler checks and mock API tests now cover the critical product path.
+
+Still not production-hard enough:
+
+- No deployed observability stack yet: metrics, tracing, dashboards, alerting,
+  SLOs, or incident runbooks.
+- No real load tests against Supabase limits, Edge Function cold starts, or P95 /
+  P99 latency.
+- No staging/prod migration pipeline with rollback discipline.
+- AI job processing is still a cron/worker pattern, not a full queue service with
+  operational dashboards.
+- Rate limiting is DB-backed and adequate for MVP, but a Redis/edge limiter would
+  be better under heavy traffic.
+- Payment and auth flows still need end-to-end testing against real provider
+  sandboxes before launch.
+
 ## Database Highlights
 
 The schema in `backend/supabase/sql/verna-schema.sql` includes:
 
 - `profiles`: real account record plus public Verna number and handle.
+- `profiles.onboarding_*`: post-OAuth onboarding state and reading preferences.
 - `oauth_identities`: Google identity links.
 - `refresh_tokens`: hashed refresh token storage.
 - `oauth_callback_exchanges`: short-lived OAuth exchange codes.
@@ -209,6 +301,9 @@ layers:
 - Server-side moderation before public visibility.
 - Report and moderation endpoints for unsafe content.
 - Rate limiting helpers for high-risk endpoints.
+- Timeout-bounded outbound calls to AI, OAuth, transcription, and billing providers.
+- Retry/backoff plus dead-letter handling for queued AI jobs.
+- Idempotency tracking for Stripe and Flutterwave webhook deliveries.
 - Session-hashed anonymous reactions to reduce spam and duplicate reactions.
 - Private data hidden from public views by design.
 
@@ -352,6 +447,7 @@ GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI
 VERNA_FRONTEND_URL
 VERNA_ALLOWED_REDIRECT_ORIGINS
+VERNA_CORS_ORIGIN
 PROCESS_AI_JOBS_SECRET
 MODERATOR_API_SECRET
 STRIPE_SECRET_KEY

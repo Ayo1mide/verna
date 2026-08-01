@@ -1,4 +1,5 @@
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.21.0"
+import { withTimeout } from "./http.ts"
 
 export type ModerationResult = {
   is_safe: boolean
@@ -19,7 +20,7 @@ export async function moderatePoemContent(content: string): Promise<ModerationRe
   if (!apiKey) return { ...fallback, reason: "Moderation unavailable" }
 
   const anthropic = new Anthropic({ apiKey })
-  const res = await anthropic.messages.create({
+  const res = await withTimeout(anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 220,
     messages: [{
@@ -34,7 +35,7 @@ Return ONLY valid JSON:
 POEM:
 ${content}`,
     }],
-  })
+  }), 20000, "Moderation timed out")
 
   const raw = res.content[0].type === "text" ? res.content[0].text : "{}"
   try {

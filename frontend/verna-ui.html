@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verna — AI Journal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Jost:wght@300;400;500&display=swap');
+
+:root {
+  --bg:        #0B1510;
+  --bg2:       #111E16;
+  --bg3:       #172219;
+  --surface:   rgba(255,255,255,0.04);
+  --surface2:  rgba(255,255,255,0.07);
+  --border:    rgba(255,255,255,0.08);
+  --accent:    #A8C5A0;
+  --accent2:   #7FAF75;
+  --cream:     #EDE8DE;
+  --white:     #F8F8F6;
+  --muted:     rgba(237,232,222,0.45);
+  --danger:    #C97B7B;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  font-family: 'Jost', sans-serif;
+  color: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── NAVIGATION ── */
+.nav {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  padding: 32px 20px 24px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nav-btn {
+  padding: 8px 20px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-btn.active, .nav-btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* ── SCREENS ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── PHONE WRAPPER ── */
+.phone {
+  max-width: 390px;
+  margin: 0 auto;
+  padding: 0 0 60px;
+  position: relative;
+}
+
+/* ── STATUS BAR ── */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 24px 8px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+/* ══════════════════════════════════════
+   SCREEN 1 — LOGIN
+══════════════════════════════════════ */
+#login {
+  background: var(--bg);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(168,197,160,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(127,175,117,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.login-content {
+  position: relative;
+  z-index: 1;
+  padding: 80px 36px 48px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-mark {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(168,197,160,0.3);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 48px;
+  background: rgba(168,197,160,0.06);
+}
+
+.logo-mark svg { width: 22px; height: 22px; }
+
+.login-headline {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.6rem;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--white);
+  margin-bottom: 12px;
+}
+
+.login-headline em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.login-sub {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 52px;
+  font-weight: 300;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.input-field {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--white);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 300;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus { border-color: var(--accent); }
+.input-field::placeholder { color: rgba(237,232,222,0.2); }
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 12px;
+  padding: 15px;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+
+.login-footer {
+  margin-top: auto;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding-top: 32px;
+}
+
+.link { color: var(--accent); cursor: pointer; }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider-text { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.08em; }
+
+.btn-ghost {
+  width: 100%;
+  background: var(--surface);
+  color: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+.btn-ghost:hover { background: var(--surface2); }
+
+/* ══════════════════════════════════════
+   SCREEN 2 — HOME
+══════════════════════════════════════ */
+#home { background: var(--bg); min-height: 100vh; }
+
+.home-header {
+  padding: 20px 24px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.greeting {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+.greeting span { display: block; font-style: italic; color: var(--accent); }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--bg);
+}
+
+.section-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 28px 24px 12px;
+}
+
+/* Mood strip */
+.mood-strip {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mood-strip::-webkit-scrollbar { display: none; }
+
+.mood-chip {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  background: var(--surface);
+}
+
+.mood-chip.selected {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* Journal cards */
+.journals-grid {
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.journal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.journal-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.journal-card:hover::before { opacity: 1; }
+.journal-card:hover { background: var(--surface2); transform: translateY(-1px); }
+
+.journal-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.journal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--white);
+}
+
+.journal-entries-count {
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.journal-preview {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.journal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mood-badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: rgba(168,197,160,0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.journal-date {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+/* New entry FAB */
+.fab {
+  position: fixed;
+  bottom: 32px;
+  right: 50%;
+  transform: translateX(195px);
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: var(--bg);
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(168,197,160,0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 100;
+}
+
+.fab:hover {
+  transform: translateX(195px) scale(1.08);
+  box-shadow: 0 12px 32px rgba(168,197,160,0.4);
+}
+
+/* Growth card */
+.growth-card {
+  margin: 0 24px 12px;
+  background: linear-gradient(135deg, rgba(168,197,160,0.1), rgba(127,175,117,0.05));
+  border: 1px solid rgba(168,197,160,0.2);
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.growth-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.growth-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.growth-delta {
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.growth-bar-bg {
+  height: 4px;
+  background: rgba(168,197,160,0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.growth-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  width: 68%;
+}
+
+.growth-insight {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 10px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 390px;
+  background: rgba(11,21,16,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0 20px;
+  z-index: 99;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.nav-item.active { opacity: 1; }
+.nav-item svg { width: 20px; height: 20px; }
+.nav-item span { font-size: 0.6rem; letter-spacing: 0.08em; color: var(--cream); }
+.nav-item.active span { color: var(--accent); }
+.nav-item.active svg { stroke: var(--accent); }
+
+/* ══════════════════════════════════════
+   SCREEN 3 — WRITE ENTRY
+══════════════════════════════════════ */
+#write { background: var(--bg); min-height: 100vh; }
+
+.write-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.back-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--cream);
+}
+
+.write-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  color: var(--white);
+  font-weight: 400;
+}
+
+.save-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.mood-selector {
+  padding: 0 24px 20px;
+}
+
+.mood-label-sm {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.mood-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mood-opt {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--muted);
+  cursor: pointer;
+  background: var(--surface);
+  transition: all 0.15s;
+}
+
+.mood-opt.sel {
+  background: rgba(168,197,160,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.write-area-wrap {
+  padding: 0 24px;
+  position: relative;
+}
+
+.write-date {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+
+.write-textarea {
+  width: 100%;
+  min-height: 280px;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.75;
+  resize: none;
+  outline: none;
+  caret-color: var(--accent);
+}
+
+.write-textarea::placeholder {
+  color: rgba(237,232,222,0.18);
+  font-style: italic;
+}
+
+.write-tools {
+  padding: 16px 24px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.mood-score-row {
+  padding: 0 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-label { font-size: 0.68rem; color: var(--muted); }
+
+.score-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent) 50%, var(--surface2) 50%);
+  border-radius: 3px;
+  outline: none;
+}
+
+.score-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(168,197,160,0.4);
+}
+
+.score-val {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 500;
+  min-width: 20px;
+}
+
+/* ══════════════════════════════════════
+   SCREEN 4 — AI INSIGHT
+══════════════════════════════════════ */
+#insight { background: var(--bg); min-height: 100vh; }
+
+.insight-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.entry-preview-card {
+  margin: 0 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.entry-preview-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.entry-preview-text {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.entry-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.meta-pill {
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.ai-section-label {
+  padding: 0 24px 10px;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.ai-insight-card {
+  margin: 0 24px 16px;
+  background: linear-gradient(135deg, rgba(168,197,160,0.08), rgba(127,175,117,0.04));
+  border: 1px solid rgba(168,197,160,0.2);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.ai-insight-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--white);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.ai-question {
+  font-size: 0.8rem;
+  color: var(--accent);
+  line-height: 1.6;
+  border-top: 1px solid rgba(168,197,160,0.15);
+  padding-top: 14px;
+}
+
+.blind-spot-card {
+  margin: 0 24px 16px;
+  background: rgba(201,123,123,0.05);
+  border: 1px solid rgba(201,123,123,0.15);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.blind-spot-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-bottom: 8px;
+}
+
+.blind-spot-text {
+  font-size: 0.78rem;
+  color: rgba(237,232,222,0.7);
+  line-height: 1.6;
+}
+
+.sentiment-row {
+  margin: 0 24px 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.sentiment-chip {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+
+.sentiment-chip-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  color: var(--accent);
+  display: block;
+}
+
+.sentiment-chip-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 4px;
+  display: block;
+}
+
+.transform-section {
+  padding: 0 24px;
+}
+
+.transform-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.transform-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.transform-btn {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.transform-btn:hover {
+  border-color: var(--accent);
+  background: rgba(168,197,160,0.08);
+}
+
+.transform-btn-icon { font-size: 1.3rem; margin-bottom: 4px; }
+.transform-btn-text { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.05em; }
+
+/* ══════════════════════════════════════
+   SCREEN 5 — TRANSFORM (POEM)
+══════════════════════════════════════ */
+#transform { background: var(--bg); min-height: 100vh; }
+
+.transform-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.type-toggle {
+  display: flex;
+  gap: 6px;
+  margin: 0 24px 20px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.type-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.poem-card {
+  margin: 0 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  min-height: 300px;
+}
+
+.poem-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--white);
+  line-height: 2;
+  white-space: pre-line;
+}
+
+.poem-actions {
+  padding: 0 24px;
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.action-btn.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.action-btn:hover { opacity: 0.85; }
+
+.milestone-toast {
+  margin: 16px 24px 0;
+  background: linear-gradient(135deg, rgba(168,197,160,0.12), rgba(127,175,117,0.06));
+  border: 1px solid rgba(168,197,160,0.25);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.milestone-icon { font-size: 1.4rem; }
+.milestone-text h4 { font-size: 0.8rem; color: var(--white); margin-bottom: 2px; }
+.milestone-text p { font-size: 0.7rem; color: var(--muted); }
+
+/* ══════════════════════════════════════
+   SCREEN 6 — FEED
+══════════════════════════════════════ */
+#feed { background: var(--bg); min-height: 100vh; }
+
+.feed-header {
+  padding: 20px 24px 0;
+}
+
+.feed-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.feed-sub { font-size: 0.75rem; color: var(--muted); }
+
+.feed-list {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feed-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 22px;
+  transition: all 0.2s;
+}
+
+.feed-card:hover { background: var(--surface2); }
+
+.feed-type-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feed-poem {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--white);
+  line-height: 1.85;
+  white-space: pre-line;
+  margin-bottom: 16px;
+}
+
+.feed-reactions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reaction-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--muted);
+}
+
+.reaction-btn:hover {
+  border-color: var(--accent);
+  background: rgba(168,197,160,0.08);
+}
+
+.reaction-btn.reacted {
+  border-color: rgba(168,197,160,0.4);
+  background: rgba(168,197,160,0.1);
+}
+
+.reaction-count { font-size: 0.65rem; }
+
+.feed-time {
+  font-size: 0.62rem;
+  color: var(--muted);
+  margin-top: 12px;
+  letter-spacing: 0.05em;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn active" onclick="showScreen('login', this)">Login</button>
+  <button class="nav-btn" onclick="showScreen('home', this)">Home</button>
+  <button class="nav-btn" onclick="showScreen('write', this)">Write Entry</button>
+  <button class="nav-btn" onclick="showScreen('insight', this)">AI Insight</button>
+  <button class="nav-btn" onclick="showScreen('transform', this)">Poem/Story</button>
+  <button class="nav-btn" onclick="showScreen('feed', this)">Community Feed</button>
+</div>
+
+<!-- ══ SCREEN 1: LOGIN ══ -->
+<div id="login" class="screen active">
+  <div class="login-bg"></div>
+  <div style="max-width:390px;margin:0 auto;">
+    <div class="login-content">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#A8C5A0" stroke-width="1.5">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+          <path d="M8 12c0-2.21 1.79-4 4-4s4 1.79 4 4-1.79 4-4 4"/>
+          <circle cx="12" cy="12" r="1.5" fill="#A8C5A0"/>
+        </svg>
+      </div>
+
+      <div class="login-headline">
+        Your feelings,<br><em>transformed.</em>
+      </div>
+      <p class="login-sub">Journal honestly. Get real insight. Turn your pain into poetry.</p>
+
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input class="input-field" type="email" placeholder="you@example.com">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input class="input-field" type="password" placeholder="••••••••">
+      </div>
+
+      <button class="btn-primary" onclick="showScreen('home', document.querySelectorAll('.nav-btn')[1])">
+        Continue
+      </button>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">or</span>
+        <div class="divider-line"></div>
+      </div>
+
+      <button class="btn-ghost">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M5.26 9.77A7.49 7.49 0 0 1 12 4.5c1.95 0 3.73.75 5.07 1.98l3.56-3.56A12 12 0 0 0 12 0C7.37 0 3.36 2.7 1.38 6.65l3.88 3.12z"/><path fill="#34A853" d="M16.04 18.01A7.48 7.48 0 0 1 12 19.5a7.49 7.49 0 0 1-6.73-4.2l-3.9 3.01A12 12 0 0 0 12 24c3.24 0 6.19-1.21 8.44-3.19l-4.4-2.8z"/><path fill="#4A90D9" d="M23.49 12.27c0-.85-.08-1.67-.21-2.47H12v4.67h6.47a5.54 5.54 0 0 1-2.4 3.63l4.4 2.8c2.56-2.37 4.02-5.87 4.02-10.13z"/><path fill="#FBBC05" d="M5.27 14.3A7.5 7.5 0 0 1 4.5 12c0-.81.14-1.6.38-2.33L1.01 6.55A11.94 11.94 0 0 0 0 12c0 1.93.46 3.75 1.27 5.37l4-3.07z"/></svg>
+        Continue with Google
+      </button>
+
+      <p class="login-footer">
+        Don't have an account? <span class="link">Sign up free</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: HOME ══ -->
+<div id="home" class="screen">
+  <div style="max-width:390px;margin:0 auto;padding-bottom:80px;">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+
+    <div class="home-header">
+      <div>
+        <div style="font-size:0.68rem;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Friday, 27 Feb</div>
+        <div class="greeting">Good evening,<span>Joshua</span></div>
+      </div>
+      <div class="avatar">JO</div>
+    </div>
+
+    <div class="section-label">How are you feeling?</div>
+    <div class="mood-strip">
+      <div class="mood-chip selected">🌊 Heavy</div>
+      <div class="mood-chip">🌱 Hopeful</div>
+      <div class="mood-chip">🔥 Angry</div>
+      <div class="mood-chip">💤 Numb</div>
+      <div class="mood-chip">✨ Grateful</div>
+      <div class="mood-chip">😰 Anxious</div>
+    </div>
+
+    <div class="section-label">This week</div>
+    <div class="growth-card">
+      <div class="growth-top">
+        <span class="growth-label">Weekly Growth</span>
+        <span class="growth-delta">+12% mood ↑</span>
+      </div>
+      <div class="growth-bar-bg"><div class="growth-bar-fill"></div></div>
+      <div class="growth-insight">"You've been sitting with difficult feelings without running. That's not weakness — that's the work."</div>
+    </div>
+
+    <div class="section-label">Your journals</div>
+    <div class="journals-grid">
+      <div class="journal-card" onclick="showScreen('write', document.querySelectorAll('.nav-btn')[2])">
+        <div class="journal-card-top">
+          <div class="journal-title">Healing Journey</div>
+          <div class="journal-entries-count">14 entries</div>
+        </div>
+        <div class="journal-preview">Started writing here after everything fell apart. It's become the one place I don't have to explain myself...</div>
+        <div class="journal-footer">
+          <div class="mood-badge">reflective</div>
+          <div class="journal-date">2h ago</div>
+        </div>
+      </div>
+
+      <div class="journal-card">
+        <div class="journal-card-top">
+          <div class="journal-title">Letters to No One</div>
+          <div class="journal-entries-count">6 entries</div>
+        </div>
+        <div class="journal-preview">Things I wanted to say but never did. The unsent messages that live in my chest...</div>
+        <div class="journal-footer">
+          <div class="mood-badge">raw</div>
+          <div class="journal-date">Yesterday</div>
+        </div>
+      </div>
+
+      <div class="journal-card" style="border-style:dashed;opacity:0.5;">
+        <div style="text-align:center;padding:10px 0;font-size:0.8rem;color:var(--muted);">+ New Journal</div>
+      </div>
+    </div>
+
+    <button class="fab" onclick="showScreen('write', document.querySelectorAll('.nav-btn')[2])">+</button>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        <span>Home</span>
+      </div>
+      <div class="nav-item" onclick="showScreen('write', document.querySelectorAll('.nav-btn')[2])">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Write</span>
+      </div>
+      <div class="nav-item" onclick="showScreen('feed', document.querySelectorAll('.nav-btn')[5])">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Feed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: WRITE ══ -->
+<div id="write" class="screen">
+  <div style="max-width:390px;margin:0 auto;">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+
+    <div class="write-header">
+      <div class="back-btn" onclick="showScreen('home', document.querySelectorAll('.nav-btn')[1])">←</div>
+      <div class="write-title">Healing Journey</div>
+      <button class="save-btn" onclick="showScreen('insight', document.querySelectorAll('.nav-btn')[3])">Save + Analyze</button>
+    </div>
+
+    <div class="mood-selector">
+      <div class="mood-label-sm">How are you feeling?</div>
+      <div class="mood-options">
+        <div class="mood-opt">😔 sad</div>
+        <div class="mood-opt sel">🌊 heavy</div>
+        <div class="mood-opt">😤 frustrated</div>
+        <div class="mood-opt">🌱 hopeful</div>
+        <div class="mood-opt">😶 numb</div>
+        <div class="mood-opt">✨ grateful</div>
+      </div>
+    </div>
+
+    <div class="mood-score-row">
+      <span class="score-label">Mood</span>
+      <input class="score-slider" type="range" min="1" max="10" value="5">
+      <span class="score-val">5</span>
+    </div>
+
+    <div class="write-area-wrap">
+      <div class="write-date">Friday, 27 February 2026</div>
+      <textarea class="write-textarea" placeholder="Start writing. No one is watching. This is yours...">Today felt heavier than I expected. I woke up okay but then something small happened and I felt everything collapse. I cried in the bathroom for ten minutes before work.
+
+I keep wondering if I'm making progress or just going in circles. Maybe both are true at the same time.</textarea>
+    </div>
+
+    <div class="write-tools">
+      <div class="tool-btn">🎤 Voice note</div>
+      <div class="tool-btn">💭 Prompt me</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 4: AI INSIGHT ══ -->
+<div id="insight" class="screen">
+  <div style="max-width:390px;margin:0 auto;padding-bottom:40px;">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+
+    <div class="insight-header">
+      <div class="back-btn" onclick="showScreen('write', document.querySelectorAll('.nav-btn')[2])">←</div>
+      <div class="write-title">Your Insight</div>
+      <div style="width:36px;"></div>
+    </div>
+
+    <div class="entry-preview-card">
+      <div class="entry-preview-title">Friday, 27 February</div>
+      <div class="entry-preview-text">"Today felt heavier than I expected. I woke up okay but then something small happened and I felt everything collapse..."</div>
+      <div class="entry-meta">
+        <div class="meta-pill">🌊 heavy</div>
+        <div class="meta-pill">5/10</div>
+        <div class="meta-pill">reflective</div>
+      </div>
+    </div>
+
+    <div class="ai-section-label">
+      <div class="ai-dot"></div>
+      Claude's Analysis
+    </div>
+
+    <div class="ai-insight-card">
+      <div class="ai-insight-text">
+        "Something small became a doorway to everything you've been carrying. That's not weakness — that's accumulated weight looking for an exit. The bathroom became the only safe place to feel it, which says something about how you're managing your emotional load in daily life."
+      </div>
+      <div class="ai-question">
+        → What was the "small thing" really about? What older feeling did it remind you of?
+      </div>
+    </div>
+
+    <div class="blind-spot-card">
+      <div class="blind-spot-label">⚡ Blind spot</div>
+      <div class="blind-spot-text">You ask if you're going in circles — but you also said "maybe both are true." That self-awareness didn't exist a month ago. The circles might be spirals.</div>
+    </div>
+
+    <div class="sentiment-row">
+      <div class="sentiment-chip">
+        <span class="sentiment-chip-val">−0.3</span>
+        <span class="sentiment-chip-label">Sentiment</span>
+      </div>
+      <div class="sentiment-chip">
+        <span class="sentiment-chip-val">grief</span>
+        <span class="sentiment-chip-label">Emotion</span>
+      </div>
+      <div class="sentiment-chip">
+        <span class="sentiment-chip-val">📝</span>
+        <span class="sentiment-chip-label">1st Entry</span>
+      </div>
+    </div>
+
+    <div class="transform-section">
+      <div class="transform-label">Transform this entry into</div>
+      <div class="transform-btns">
+        <div class="transform-btn" onclick="showScreen('transform', document.querySelectorAll('.nav-btn')[4])">
+          <div class="transform-btn-icon">📜</div>
+          <div class="transform-btn-text">Poem</div>
+        </div>
+        <div class="transform-btn" onclick="showScreen('transform', document.querySelectorAll('.nav-btn')[4])">
+          <div class="transform-btn-icon">🎬</div>
+          <div class="transform-btn-text">Story</div>
+        </div>
+        <div class="transform-btn" onclick="showScreen('transform', document.querySelectorAll('.nav-btn')[4])">
+          <div class="transform-btn-icon">🎥</div>
+          <div class="transform-btn-text">Script</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 5: TRANSFORM ══ -->
+<div id="transform" class="screen">
+  <div style="max-width:390px;margin:0 auto;padding-bottom:40px;">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+
+    <div class="transform-header">
+      <div class="back-btn" onclick="showScreen('insight', document.querySelectorAll('.nav-btn')[3])">←</div>
+      <div class="write-title">Your Poem</div>
+      <div style="width:36px;"></div>
+    </div>
+
+    <div class="type-toggle">
+      <button class="type-btn active">Poem</button>
+      <button class="type-btn">Story</button>
+      <button class="type-btn">Script</button>
+    </div>
+
+    <div class="poem-card">
+      <div class="poem-text">something small
+became the door
+
+I woke up okay —
+that was my first mistake,
+thinking okay
+was enough
+
+then it came,
+small
+the way a crack
+in a dam is small
+
+and everything
+I had been holding
+found its exit
+through my eyes
+in a bathroom
+at 8am
+
+ten minutes
+is not a breakdown
+it is maintenance
+
+maybe progress
+looks like circles
+from the inside
+
+maybe a spiral
+and a circle
+are the same shape
+depending
+on where you stand</div>
+    </div>
+
+    <div class="milestone-toast">
+      <div class="milestone-icon">📝</div>
+      <div class="milestone-text">
+        <h4>First Poem Unlocked</h4>
+        <p>You turned your pain into something real.</p>
+      </div>
+    </div>
+
+    <div class="poem-actions" style="margin-top:16px;">
+      <div class="action-btn" onclick="showScreen('feed', document.querySelectorAll('.nav-btn')[5])">Share Anonymously</div>
+      <div class="action-btn primary">Save</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 6: FEED ══ -->
+<div id="feed" class="screen">
+  <div style="max-width:390px;margin:0 auto;padding-bottom:80px;">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+
+    <div class="feed-header">
+      <div class="feed-title">Community</div>
+      <div class="feed-sub">Anonymous voices. Real feelings.</div>
+    </div>
+
+    <div class="feed-list">
+
+      <div class="feed-card">
+        <div class="feed-type-badge">✦ poem</div>
+        <div class="feed-poem">I told myself
+I was fine
+so many times
+I forgot
+what fine
+felt like
+
+now I just say
+I'm here
+and leave it
+at that</div>
+        <div class="feed-reactions">
+          <div class="reaction-btn reacted">🤍 <span class="reaction-count">24</span></div>
+          <div class="reaction-btn">💔 <span class="reaction-count">12</span></div>
+          <div class="reaction-btn">🌱 <span class="reaction-count">8</span></div>
+          <div class="reaction-btn">🌙 <span class="reaction-count">5</span></div>
+        </div>
+        <div class="feed-time">2 hours ago</div>
+      </div>
+
+      <div class="feed-card">
+        <div class="feed-type-badge">✦ story</div>
+        <div class="feed-poem" style="font-style:normal;font-size:0.82rem;line-height:1.7;">She sat in the car for eleven minutes after pulling into the driveway. Not because she was sad. Because inside meant answering questions she didn't have answers to yet. The radio played something she used to love. She let it finish.</div>
+        <div class="feed-reactions">
+          <div class="reaction-btn">🤍 <span class="reaction-count">41</span></div>
+          <div class="reaction-btn reacted">🌊 <span class="reaction-count">19</span></div>
+          <div class="reaction-btn">✨ <span class="reaction-count">7</span></div>
+          <div class="reaction-btn">🕯️ <span class="reaction-count">11</span></div>
+        </div>
+        <div class="feed-time">5 hours ago</div>
+      </div>
+
+      <div class="feed-card">
+        <div class="feed-type-badge">✦ poem</div>
+        <div class="feed-poem">my therapist asked
+what I need
+
+I said
+I don't know
+
+she said
+that's the most honest thing
+you've said all session
+
+and I cried
+because she was right</div>
+        <div class="feed-reactions">
+          <div class="reaction-btn">🤍 <span class="reaction-count">67</span></div>
+          <div class="reaction-btn">💔 <span class="reaction-count">33</span></div>
+          <div class="reaction-btn reacted">🦋 <span class="reaction-count">14</span></div>
+          <div class="reaction-btn">🌱 <span class="reaction-count">22</span></div>
+        </div>
+        <div class="feed-time">Yesterday</div>
+      </div>
+
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="showScreen('home', document.querySelectorAll('.nav-btn')[1])">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        <span>Home</span>
+      </div>
+      <div class="nav-item" onclick="showScreen('write', document.querySelectorAll('.nav-btn')[2])">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Write</span>
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Feed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// Mood chips
+document.querySelectorAll('.mood-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+  });
+});
+
+// Mood options in write screen
+document.querySelectorAll('.mood-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.mood-opt').forEach(o => o.classList.remove('sel'));
+    opt.classList.add('sel');
+  });
+});
+
+// Type toggle
+document.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Reactions
+document.querySelectorAll('.reaction-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('reacted');
+    const count = btn.querySelector('.reaction-count');
+    count.textContent = btn.classList.contains('reacted')
+      ? parseInt(count.textContent) + 1
+      : parseInt(count.textContent) - 1;
+  });
+});
+
+// Mood score slider
+const slider = document.querySelector('.score-slider');
+const scoreVal = document.querySelector('.score-val');
+if (slider) {
+  slider.addEventListener('input', () => {
+    scoreVal.textContent = slider.value;
+  });
+}
+</script>
+</body>
+</html>

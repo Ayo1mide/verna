@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { fetchWithTimeout } from "../_shared/http.ts"
 
 function timingSafeEqual(a: string, b: string) {
   if (a.length !== b.length) return false
@@ -18,9 +19,10 @@ async function verifyTransaction(transactionId: number | string) {
   const secret = Deno.env.get("FLUTTERWAVE_SECRET_KEY")
   if (!secret) throw new Error("FLUTTERWAVE_SECRET_KEY is not configured")
 
-  const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
+  const response = await fetchWithTimeout(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
     method: "GET",
     headers: { Authorization: `Bearer ${secret}` },
+    timeoutMs: 12000,
   })
   const json = await response.json()
   if (!response.ok) throw new Error(`Flutterwave verification failed: ${JSON.stringify(json)}`)
@@ -50,6 +52,11 @@ async function verifyHmacSignature(rawBody: string, signature: string, secretHas
   const hex = bytesToHex(bytes)
   const base64 = bytesToBase64(bytes)
   return timingSafeEqual(signature, hex) || timingSafeEqual(signature, base64)
+}
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
 serve(async (req) => {
@@ -85,6 +92,19 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
+
+  const fallbackEventId = await sha256Hex(rawBody)
+  const providerEventId = String(payload?.id ?? data?.id ?? txRef ?? fallbackEventId)
+  const { data: existingEvent } = await supabase
+    .from("payment_webhook_events")
+    .select("id")
+    .eq("provider", "flutterwave")
+    .eq("provider_event_id", providerEventId)
+    .single()
+
+  if (existingEvent) {
+    return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200, headers: { "Content-Type": "application/json" } })
+  }
 
   try {
     if (event === "charge.completed" && transactionId && userId) {
@@ -129,6 +149,18 @@ serve(async (req) => {
       } else if (subId) {
         await updater.eq("flutterwave_subscription_id", subId)
       }
+    }
+
+    const { error: eventError } = await supabase
+      .from("payment_webhook_events")
+      .insert({ provider: "flutterwave", provider_event_id: providerEventId, event_type: event ?? null })
+
+    if (eventError) {
+      const message = String(eventError.message || "").toLowerCase()
+      if ((eventError as any).code === "23505" || message.includes("duplicate")) {
+        return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200, headers: { "Content-Type": "application/json" } })
+      }
+      throw eventError
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "Content-Type": "application/json" } })

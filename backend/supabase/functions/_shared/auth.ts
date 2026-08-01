@@ -1,9 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { JwtError, verifyVernaJwt } from "./app-jwt.ts"
 
+const corsOrigin = Deno.env.get("VERNA_CORS_ORIGIN") || Deno.env.get("VERNA_FRONTEND_URL") || "*"
+
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": corsOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Vary": "Origin",
 }
 
 export class HttpError extends Error {
@@ -43,7 +46,7 @@ export function serviceClient() {
 }
 
 export async function rateLimit(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   key: string,
   limit: number,
   windowSeconds: number,

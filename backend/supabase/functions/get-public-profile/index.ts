@@ -33,7 +33,7 @@ serve(async (req) => {
 
     let poemsQuery = supabase
       .from("poem_posts")
-      .select("id, parent_post_id, author_handle, author_mode, title, content, mood, reaction_counts, total_reactions, reply_count, repost_count, save_count, published_at, created_at")
+      .select("id, parent_post_id, author_handle, author_mode, title, content, mood, tags, reaction_counts, total_reactions, reply_count, repost_count, save_count, published_at, created_at")
       .eq("user_id", profile.id)
       .eq("author_mode", "verna_id")
       .eq("is_visible", true)

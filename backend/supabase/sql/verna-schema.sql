@@ -21,6 +21,9 @@ create table if not exists public.profiles (
   flutterwave_plan_id bigint,
   flutterwave_subscription_id text,
   subscription_renewal_at timestamptz,
+  onboarding_completed boolean not null default false,
+  onboarding_goal text,
+  preferred_moods text[] not null default '{}',
   created_at timestamptz default now()
 );
 
@@ -35,7 +38,10 @@ alter table public.profiles
   add column if not exists flutterwave_customer_code text,
   add column if not exists flutterwave_plan_id bigint,
   add column if not exists flutterwave_subscription_id text,
-  add column if not exists subscription_renewal_at timestamptz;
+  add column if not exists subscription_renewal_at timestamptz,
+  add column if not exists onboarding_completed boolean not null default false,
+  add column if not exists onboarding_goal text,
+  add column if not exists preferred_moods text[] not null default '{}';
 
 create unique index if not exists idx_profiles_stripe_customer_id on public.profiles (stripe_customer_id) where stripe_customer_id is not null;
 create unique index if not exists idx_profiles_stripe_subscription_id on public.profiles (stripe_subscription_id) where stripe_subscription_id is not null;
@@ -80,9 +86,19 @@ create table if not exists public.app_refresh_tokens (
   created_at timestamptz default now()
 );
 
+create table if not exists public.payment_webhook_events (
+  id uuid default gen_random_uuid() primary key,
+  provider text not null check (provider in ('stripe','flutterwave')),
+  provider_event_id text not null,
+  event_type text,
+  processed_at timestamptz default now(),
+  unique(provider, provider_event_id)
+);
+
 create index if not exists idx_oauth_identities_user on public.oauth_identities (user_id);
 create index if not exists idx_oauth_callback_exchanges_expires on public.oauth_callback_exchanges (expires_at, used_at);
 create index if not exists idx_app_refresh_tokens_user_active on public.app_refresh_tokens (user_id, expires_at) where revoked_at is null;
+create index if not exists idx_payment_webhook_events_processed on public.payment_webhook_events (processed_at);
 
 create or replace function public.assign_verna_identity()
 returns table(verna_number integer, verna_handle text) as $$
@@ -275,15 +291,37 @@ create table if not exists public.ai_jobs (
   id uuid default gen_random_uuid() primary key,
   type text not null check (type in ('transform','transcribe','analyze','poem_generate')),
   payload jsonb not null,
-  status text not null default 'pending' check (status in ('pending','processing','completed','failed')),
+  status text not null default 'pending' check (status in ('pending','processing','completed','failed','dead_letter')),
   attempts smallint default 0,
+  max_attempts smallint not null default 3,
   available_at timestamptz default now(),
   locked_at timestamptz,
   worker text,
   result jsonb,
+  last_error text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table public.ai_jobs
+  add column if not exists max_attempts smallint not null default 3,
+  add column if not exists last_error text;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'ai_jobs_status_check'
+      and conrelid = 'public.ai_jobs'::regclass
+  ) then
+    alter table public.ai_jobs drop constraint ai_jobs_status_check;
+  end if;
+end $$;
+
+alter table public.ai_jobs
+  add constraint ai_jobs_status_check
+  check (status in ('pending','processing','completed','failed','dead_letter'));
 
 -- Poem drafts: private workspace where raw thoughts become editable poems
 create table if not exists public.poem_drafts (
@@ -297,12 +335,28 @@ create table if not exists public.poem_drafts (
   edited_title text,
   edited_poem text,
   status text not null default 'generating'
-    check (status in ('generating','ready','failed','posted')),
+    check (status in ('draft','generating','ready','failed','posted')),
   generation_job_id uuid references public.ai_jobs(id) on delete set null,
   error_message text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'poem_drafts_status_check'
+      and conrelid = 'public.poem_drafts'::regclass
+  ) then
+    alter table public.poem_drafts drop constraint poem_drafts_status_check;
+  end if;
+end $$;
+
+alter table public.poem_drafts
+  add constraint poem_drafts_status_check
+  check (status in ('draft','generating','ready','failed','posted'));
 
 drop trigger if exists poem_drafts_updated_at on public.poem_drafts;
 create trigger poem_drafts_updated_at
@@ -321,6 +375,7 @@ create table if not exists public.poem_posts (
   title text,
   content text not null,
   mood text,
+  tags text[] not null default '{}',
   moderation_status text not null default 'pending'
     check (moderation_status in ('pending','approved','rejected')),
   moderation_reason text,
@@ -341,6 +396,7 @@ alter table public.poem_posts
   add column if not exists moderation_status text not null default 'pending'
     check (moderation_status in ('pending','approved','rejected')),
   add column if not exists moderation_reason text,
+  add column if not exists tags text[] not null default '{}',
   add column if not exists reply_count integer default 0,
   add column if not exists repost_count integer default 0,
   add column if not exists save_count integer default 0,
@@ -440,6 +496,7 @@ select
   title,
   content,
   mood,
+  tags,
   reaction_counts,
   total_reactions,
   reply_count,
@@ -465,6 +522,7 @@ select
   p.title,
   p.content,
   p.mood,
+  p.tags,
   p.reaction_counts,
   p.total_reactions,
   p.reply_count,
@@ -491,6 +549,7 @@ select
   p.title,
   p.content,
   p.mood,
+  p.tags,
   p.reaction_counts,
   p.total_reactions,
   p.reply_count,
@@ -638,6 +697,18 @@ create or replace function claim_ai_job(p_worker text)
 returns setof public.ai_jobs as $$
 declare v_job public.ai_jobs%rowtype;
 begin
+  update public.ai_jobs
+  set status = 'pending', worker = null, available_at = now(), updated_at = now()
+  where status = 'processing'
+    and locked_at < now() - interval '10 minutes'
+    and attempts < max_attempts;
+
+  update public.ai_jobs
+  set status = 'dead_letter', updated_at = now(), last_error = coalesce(last_error, 'worker lock expired')
+  where status = 'processing'
+    and locked_at < now() - interval '10 minutes'
+    and attempts >= max_attempts;
+
   update public.ai_jobs set status = 'processing', locked_at = now(), worker = p_worker, attempts = attempts + 1
   where id = (
     select id from public.ai_jobs
@@ -653,8 +724,44 @@ $$ language plpgsql security definer;
 
 create or replace function finish_ai_job(p_id uuid, p_status text, p_result jsonb)
 returns void as $$
+declare
+  v_attempts integer;
+  v_max_attempts integer;
 begin
-  update public.ai_jobs set status = p_status, result = p_result, updated_at = now() where id = p_id;
+  if p_status = 'completed' then
+    update public.ai_jobs
+    set status = 'completed',
+        result = p_result,
+        last_error = null,
+        updated_at = now()
+    where id = p_id;
+    return;
+  end if;
+
+  select attempts, max_attempts
+  into v_attempts, v_max_attempts
+  from public.ai_jobs
+  where id = p_id;
+
+  if p_status = 'dead_letter' or coalesce(v_attempts, 0) >= coalesce(v_max_attempts, 3) then
+    update public.ai_jobs
+    set status = 'dead_letter',
+        result = p_result,
+        last_error = p_result->>'error',
+        updated_at = now()
+    where id = p_id;
+    return;
+  end if;
+
+  update public.ai_jobs
+  set status = 'pending',
+      result = p_result,
+      last_error = p_result->>'error',
+      locked_at = null,
+      worker = null,
+      available_at = now() + make_interval(secs => least(300, power(2, greatest(attempts, 1))::integer * 15)),
+      updated_at = now()
+  where id = p_id;
 end;
 $$ language plpgsql security definer;
 
@@ -841,6 +948,7 @@ alter table public.profiles enable row level security;
 alter table public.oauth_identities enable row level security;
 alter table public.oauth_callback_exchanges enable row level security;
 alter table public.app_refresh_tokens enable row level security;
+alter table public.payment_webhook_events enable row level security;
 alter table public.journals enable row level security;
 alter table public.journal_entries enable row level security;
 alter table public.transforms enable row level security;
@@ -915,9 +1023,11 @@ create index if not exists idx_feed_reactions_post on public.feed_reactions (fee
 create index if not exists idx_milestones_user on public.milestones (user_id);
 create index if not exists idx_rate_limits_key_window on public.rate_limits (key, window_start);
 create index if not exists idx_ai_jobs_status_available on public.ai_jobs (status, available_at, created_at);
+create index if not exists idx_ai_jobs_dead_letter_created on public.ai_jobs (created_at) where status = 'dead_letter';
 create index if not exists idx_poem_drafts_user_status on public.poem_drafts (user_id, status, created_at);
 create unique index if not exists idx_poem_posts_unique_draft on public.poem_posts (draft_id) where draft_id is not null;
 create index if not exists idx_poem_posts_visible_created on public.poem_posts (is_visible, is_flagged, moderation_status, published_at desc, created_at desc);
+create index if not exists idx_poem_posts_tags on public.poem_posts using gin (tags);
 create index if not exists idx_poem_posts_user_created on public.poem_posts (user_id, created_at);
 create index if not exists idx_poem_posts_parent_created on public.poem_posts (parent_post_id, created_at);
 create index if not exists idx_poem_post_reactions_post on public.poem_post_reactions (poem_post_id);

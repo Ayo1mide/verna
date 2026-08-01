@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { fetchWithTimeout } from "../_shared/http.ts"
 
 const cryptoProvider = globalThis.crypto
 
@@ -43,9 +44,10 @@ async function fetchStripeSubscription(subscriptionId: string) {
   const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
   if (!stripeSecretKey) throw new Error("STRIPE_SECRET_KEY is not configured")
 
-  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+  const response = await fetchWithTimeout(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
     method: "GET",
     headers: { Authorization: `Bearer ${stripeSecretKey}` },
+    timeoutMs: 12000,
   })
 
   const json = await response.json()
@@ -83,6 +85,19 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
+
+  if (event.id) {
+    const { data: existingEvent } = await supabase
+      .from("payment_webhook_events")
+      .select("id")
+      .eq("provider", "stripe")
+      .eq("provider_event_id", event.id)
+      .single()
+
+    if (existingEvent) {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200, headers: { "Content-Type": "application/json" } })
+    }
+  }
 
   try {
     if (eventType === "checkout.session.completed") {
@@ -150,6 +165,20 @@ serve(async (req) => {
             subscription_status: "past_due",
           })
           .eq("stripe_customer_id", customerId)
+      }
+    }
+
+    if (event.id) {
+      const { error: eventError } = await supabase
+        .from("payment_webhook_events")
+        .insert({ provider: "stripe", provider_event_id: event.id, event_type: eventType })
+
+      if (eventError) {
+        const message = String(eventError.message || "").toLowerCase()
+        if ((eventError as any).code === "23505" || message.includes("duplicate")) {
+          return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200, headers: { "Content-Type": "application/json" } })
+        }
+        throw eventError
       }
     }
 

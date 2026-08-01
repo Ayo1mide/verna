@@ -24,7 +24,7 @@ serve(async (req) => {
 
     let query = supabase
       .from("poem_posts")
-      .select("id, draft_id, parent_post_id, author_mode, author_handle, title, content, mood, moderation_status, moderation_reason, is_visible, is_flagged, reaction_counts, total_reactions, reply_count, repost_count, save_count, published_at, created_at, updated_at")
+      .select("id, draft_id, parent_post_id, author_mode, author_handle, title, content, mood, tags, moderation_status, moderation_reason, is_visible, is_flagged, reaction_counts, total_reactions, reply_count, repost_count, save_count, published_at, created_at, updated_at")
       .eq("user_id", authUser.id)
       .order("created_at", { ascending: false })
       .limit(parsed.data.limit + 1)

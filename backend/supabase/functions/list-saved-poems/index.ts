@@ -42,7 +42,7 @@ serve(async (req) => {
     const { data: publicPoems, error: poemsError } = ids.length
       ? await supabase
         .from("public_poem_posts")
-        .select("id, parent_post_id, author_handle, author_mode, title, content, mood, reaction_counts, total_reactions, reply_count, repost_count, save_count, published_at, created_at")
+        .select("id, parent_post_id, author_handle, author_mode, title, content, mood, tags, reaction_counts, total_reactions, reply_count, repost_count, save_count, published_at, created_at")
         .in("id", ids)
       : { data: [], error: null }
 

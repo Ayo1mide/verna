@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.21.0"
 import { z } from "https://esm.sh/zod@3.22.2"
 import { assertPost, handleError, HttpError, json, rateLimit, requireUser, serviceClient } from "../_shared/auth.ts"
+import { withTimeout } from "../_shared/http.ts"
 
 const bodySchema = z.object({
   mode: z.enum(["generate", "edit"]).default("edit"),
@@ -41,7 +42,7 @@ serve(async (req) => {
     await rateLimit(supabase, `poem:ai-edit:${authUser.id}`, 40, 3600)
 
     const anthropic = new Anthropic({ apiKey: requireApiKey() })
-    const res = await anthropic.messages.create({
+    const res = await withTimeout(anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 900,
       messages: [{
@@ -65,7 +66,7 @@ Existing title: ${parsed.data.title ?? ""}
 TEXT:
 ${parsed.data.text}`,
       }],
-    })
+    }), 30000, "AI edit timed out")
 
     const raw = res.content[0].type === "text" ? res.content[0].text : "{}"
     let suggestion: { title: string | null; content: string }

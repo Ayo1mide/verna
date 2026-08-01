@@ -12,7 +12,7 @@ serve(async (req) => {
 
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, verna_number, verna_handle, subscription_tier, subscription_status, created_at")
+      .select("id, verna_number, verna_handle, onboarding_completed, onboarding_goal, preferred_moods, subscription_tier, subscription_status, created_at")
       .eq("id", authUser.id)
       .single()
 

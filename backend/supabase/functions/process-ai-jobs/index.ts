@@ -18,9 +18,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.21.0"
 import { json } from "../_shared/auth.ts"
+import { fetchArrayBufferWithLimit, fetchWithTimeout, withTimeout } from "../_shared/http.ts"
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! })
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -82,11 +84,11 @@ Rules:
   "poem": "<the poem text>"
 }`
 
-      const res = await anthropic.messages.create({
+      const res = await withTimeout(anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 700,
         messages: [{ role: 'user', content: prompt }],
-      })
+      }), 45000, 'poem generation timed out')
       const raw = res.content[0].type === 'text' ? res.content[0].text : '{}'
 
       let parsed: { title?: string | null; poem?: string } = {}
@@ -134,7 +136,11 @@ Rules:
         prompt = `You are a director writing a short film script based on a real person's emotional experience.\n\nJournal entry:\n"${entry.content}"\n\nMood: ${entry.mood} (${entry.mood_score}/10)\n\nWrite a short film script that includes:\n- SCENE: description of the visual setting (lighting, location, time of day)\n- ACTION: what the character is doing when we first see them\n- DIALOGUE: if other people were mentioned in the entry, write their actual lines based on the context\n- VOICEOVER: the character's internal thoughts in their own voice — use words from the actual entry\n- VISUAL PROMPT: one sentence describing the key image for AI video generation\n\nFormat it exactly like this:\n\nSCENE: [setting description]\n\nACTION: [what we see]\n\nVOICEOVER: "[internal monologue]"\n\nDIALOGUE:\n[Character name]: "[line]"\n[Character name]: "[line]"\n\nVISUAL PROMPT: [one sentence for AI image/video generation]\n\nBe specific. Be cinematic. Be human.`
       }
 
-      const res = await anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+      const res = await withTimeout(
+        anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] }),
+        45000,
+        'transform generation timed out',
+      )
       const raw = res.content[0].type === 'text' ? res.content[0].text : ''
 
       let content = raw
@@ -170,11 +176,11 @@ Rules:
       // Fetch or use provided URL/base64
       let audioBuffer: ArrayBuffer | null = null
       if (payload.voice_note_url) {
-        const response = await fetch(payload.voice_note_url)
-        if (response.ok) audioBuffer = await response.arrayBuffer()
+        audioBuffer = await fetchArrayBufferWithLimit(payload.voice_note_url, MAX_AUDIO_BYTES)
       }
       if (!audioBuffer && payload.voice_file_base64) {
         const binaryString = atob(payload.voice_file_base64)
+        if (binaryString.length > MAX_AUDIO_BYTES) throw new Error('audio file is too large')
         const bytes = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i)
         audioBuffer = bytes.buffer
@@ -189,7 +195,12 @@ Rules:
       formData.append('model', 'whisper-1')
       formData.append('language', 'en')
 
-      const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, body: formData })
+      const whisperResponse = await fetchWithTimeout('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+        body: formData,
+        timeoutMs: 30000,
+      })
       const transcriptionData = await whisperResponse.json()
       if (!whisperResponse.ok) throw new Error('whisper failed')
 
@@ -205,7 +216,9 @@ Rules:
   } catch (err) {
     console.error('job processing error', err)
     const message = err instanceof Error ? err.message : String(err)
-    if (job.type === 'poem_generate' && job.payload?.draft_id) {
+    const attempts = Number(job.attempts || 1)
+    const maxAttempts = Number(job.max_attempts || 3)
+    if (job.type === 'poem_generate' && job.payload?.draft_id && attempts >= maxAttempts) {
       try {
         await supabase
           .from('poem_drafts')

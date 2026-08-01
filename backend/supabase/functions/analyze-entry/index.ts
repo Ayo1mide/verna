@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.21.0"
 import { z } from "https://esm.sh/zod@3.22.2"
 import { assertPost, handleError, json, requireUser, serviceClient } from "../_shared/auth.ts"
+import { withTimeout } from "../_shared/http.ts"
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! })
 
@@ -79,11 +80,11 @@ Return ONLY a valid JSON object with NO markdown, NO explanation:
   "growth_signal": "<one specific thing showing genuine progress or self-awareness, not generic praise>"
 }`
 
-    const response = await anthropic.messages.create({
+    const response = await withTimeout(anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 500,
       messages: [{ role: "user", content: analysisPrompt }]
-    })
+    }), 30000, "AI analysis timed out")
 
     const rawText = response.content[0].type === 'text' ? response.content[0].text : '{}'
     let analysis: any = {}

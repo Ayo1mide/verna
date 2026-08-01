@@ -36,9 +36,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { z } from "https://esm.sh/zod@3.22.2"
-import { assertPost, handleError, json, requireUser, serviceClient } from "../_shared/auth.ts"
+import { assertPost, handleError, json, rateLimit, requireUser, serviceClient } from "../_shared/auth.ts"
+import { assertPublicHttpUrl } from "../_shared/http.ts"
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")
+const MAX_AUDIO_BASE64_CHARS = 34 * 1024 * 1024
 
 const bodySchema = z.object({
   entry_id: z.string().uuid(),
@@ -66,6 +68,7 @@ serve(async (req) => {
     }
 
     const supabase = serviceClient()
+    await rateLimit(supabase, `voice:transcribe:${authUser.id}`, 20, 3600)
 
     const { data: entry } = await supabase
       .from("journal_entries")
@@ -78,31 +81,13 @@ serve(async (req) => {
       return json({ error: true, message: "Entry not found" }, 404)
     }
 
-    let audioBuffer: ArrayBuffer | null = null
-
     if (voice_note_url || entry.voice_note_url) {
       const url = voice_note_url || entry.voice_note_url
-      try {
-        const response = await fetch(url)
-        if (response.ok) {
-          audioBuffer = await response.arrayBuffer()
-        }
-      } catch (e) {
-        console.error("Failed to fetch audio URL:", e)
-      }
+      assertPublicHttpUrl(url)
     }
 
-    if (voice_file_base64 && !audioBuffer) {
-      const binaryString = atob(voice_file_base64)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      audioBuffer = bytes.buffer
-    }
-
-    if (!audioBuffer) {
-      return json({ error: true, message: "No audio data provided" }, 400)
+    if (voice_file_base64 && voice_file_base64.length > MAX_AUDIO_BASE64_CHARS) {
+      return json({ error: true, message: "Audio payload is too large" }, 413)
     }
 
     const { data: job, error: jobError } = await supabase

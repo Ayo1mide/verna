@@ -1,0 +1,17 @@
+{
+  "lock": "deno.lock",
+  "compilerOptions": {
+    "lib": ["deno.window", "dom", "dom.iterable", "esnext"],
+    "strict": true
+  },
+  "lint": {
+    "exclude": ["node_modules", "backend/dist", "frontend/dist"]
+  },
+  "fmt": {
+    "exclude": ["node_modules", "backend/dist", "frontend/dist"]
+  },
+  "tasks": {
+    "check:functions": "deno check backend/supabase/functions/complete-onboarding/index.ts backend/supabase/functions/create-poem-draft/index.ts backend/supabase/functions/publish-poem/index.ts backend/supabase/functions/list-public-poems/index.ts backend/supabase/functions/process-ai-jobs/index.ts backend/supabase/functions/transcribe-voice/index.ts backend/supabase/functions/create-checkout-session/index.ts backend/supabase/functions/create-flutterwave-payment-link/index.ts backend/supabase/functions/stripe-webhook/index.ts backend/supabase/functions/flutterwave-webhook/index.ts backend/supabase/functions/ai-edit-poem/index.ts backend/supabase/functions/analyze-entry/index.ts",
+    "test:functions": "deno test --allow-env backend/supabase/functions"
+  }
+}
